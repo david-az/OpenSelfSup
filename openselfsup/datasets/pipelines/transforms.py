@@ -112,3 +112,8 @@ class Solarization(object):
     def __repr__(self):
         repr_str = self.__class__.__name__
         return repr_str
+
+@PIPELINES.register_module
+class NormalizeMeanVar(object):
+    def __call__(self, img):
+        return (img - img.mean([1, 2, 3], True)) / img.std([1, 2, 3], keepdim=True)

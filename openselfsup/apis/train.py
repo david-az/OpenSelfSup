@@ -181,9 +181,10 @@ def _dist_train(model, dataset, cfg, logger=None, timestamp=None, meta=None):
             shuffle=True,
             replace=getattr(cfg.data, 'sampling_replace', False),
             seed=cfg.seed,
-            drop_last=getattr(cfg.data, 'drop_last', False),
-            prefetch=cfg.prefetch,
-            img_norm_cfg=cfg.img_norm_cfg) for ds in dataset
+            drop_last=getattr(cfg.data, 'drop_last', False))
+            # prefetch=cfg.prefetch,
+            # img_norm_cfg=cfg.img_norm_cfg) 
+            for ds in dataset
     ]
     optimizer = build_optimizer(model, cfg.optimizer)
     if 'use_fp16' in cfg and cfg.use_fp16:
@@ -248,9 +249,10 @@ def _non_dist_train(model,
             shuffle=True,
             replace=getattr(cfg.data, 'sampling_replace', False),
             seed=cfg.seed,
-            drop_last=getattr(cfg.data, 'drop_last', False),
-            prefetch=cfg.prefetch,
-            img_norm_cfg=cfg.img_norm_cfg) for ds in dataset
+            drop_last=getattr(cfg.data, 'drop_last', False))
+            # prefetch=cfg.prefetch,
+            # img_norm_cfg=cfg.img_norm_cfg) 
+            for ds in dataset
     ]
 
     if 'use_fp16' in cfg and cfg.use_fp16 == True:
@@ -270,6 +272,8 @@ def _non_dist_train(model,
     # an ugly walkaround to make the .log and .log.json filenames the same
     runner.timestamp = timestamp
     optimizer_config = cfg.optimizer_config
+    optimizer_config = DistOptimizerHook(**cfg.optimizer_config)
+
     runner.register_training_hooks(cfg.lr_config, optimizer_config,
                                    cfg.checkpoint_config, cfg.log_config)
 
