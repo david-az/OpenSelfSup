@@ -117,3 +117,8 @@ class Solarization(object):
 class NormalizeMeanVar(object):
     def __call__(self, img):
         return (img - img.mean([1, 2, 3], True)) / img.std([1, 2, 3], keepdim=True)
+
+@PIPELINES.register_module
+class NormalizeMinMax(nn.Module):
+    def __call__(self, img):
+        return (img - img.min()) / (img.max() - img.min())
