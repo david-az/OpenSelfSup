@@ -88,14 +88,19 @@ class PrefetchImagesDataset(Dataset):
         self.torch_images = []
         print(f'Loading {len(self.paths)} images\n')
         for path in tqdm(self.paths):
-            img = cv2.imread(path, -1).astype(np.float32)
+            try:
+                img = cv2.imread(path, -1).astype(np.float32)
+            except:
+                continue
             img = torch.tensor(img).unsqueeze(0)
             img = img.expand(3, -1, -1).unsqueeze(0)
             img = self.resize(img)
             self.torch_images.append(img)
+        print(f'Loaded {len(self.torch_images)} images\n')
+        
 
     def __len__(self):
-        return len(self.paths)
+        return len(self.torch_images) if self.prefetch else len(self.paths)
 
     def __getitem__(self, index):
         if self.prefetch:
