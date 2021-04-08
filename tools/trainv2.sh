@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e # exits when error occurs
 exp_name=r50_jitter_ep100
 ssl_config=$HOME/OpenSelfSup/az_configs/augmentations/$exp_name.py
 ssl_work_dir=$HOME/OpenSelfSup/logs/$exp_name 
