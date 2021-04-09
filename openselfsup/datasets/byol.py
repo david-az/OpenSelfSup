@@ -68,10 +68,11 @@ class ImagesDataset(Dataset):
 
 @DATASETS.register_module
 class PrefetchImagesDataset(Dataset):
-    def __init__(self, ann_file, transform, prefetch=True, prefetch_size=300):
+    def __init__(self, ann_file, transform, in_channels=3, prefetch=True, prefetch_size=300):
         super().__init__()
 
         self.prefetch = prefetch
+        self.in_channels = in_channels
         transform = [build_from_cfg(p, PIPELINES) for p in transform]
         self.transform = Compose(transform)
         
@@ -93,7 +94,6 @@ class PrefetchImagesDataset(Dataset):
             except:
                 continue
             img = torch.tensor(img).unsqueeze(0)
-            img = img.expand(3, -1, -1).unsqueeze(0)
             img = self.resize(img)
             self.torch_images.append(img)
         print(f'Loaded {len(self.torch_images)} images\n')
@@ -105,11 +105,13 @@ class PrefetchImagesDataset(Dataset):
     def __getitem__(self, index):
         if self.prefetch:
             img = self.torch_images[index]
+            img = img.expand(1, self.in_channels, -1, -1)
+
         else:
             path = self.paths[index]
             img = cv2.imread(path, -1).astype(np.float32)
             img = torch.tensor(img).unsqueeze(0)
-            img = img.expand(3, -1, -1).unsqueeze(0)
+            img = img.expand(self.in_channels, -1, -1).unsqueeze(0)
 
         view1 = self.transform(img)
         view2 = self.transform(img)

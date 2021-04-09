@@ -1,4 +1,4 @@
-CUDA_VISIBLE_DEVICES=2 python train.py \
-    /home/david/OpenSelfSup/az_configs/r50_256_bs32_ep300_imagenet.py \
-    --work_dir /home/david/OpenSelfSup/logs/r50_256_bs32_ep300_imagenet \
-    --resume_from /home/david/OpenSelfSup/logs/r50_256_bs32_ep300_imagenet/latest.pth
+CUDA_VISIBLE_DEVICES=0 python train.py \
+    /home/user/OpenSelfSup/az_configs/backbones/hrnet_256_bs32_ep300.py \
+    --work_dir /media/disk-1/logs/hrnet_256_bs32_ep300 \
+    # --resume_from /media/disk-1/logs/r50_256_bs32_ep100/latest.pth
