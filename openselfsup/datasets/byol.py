@@ -68,7 +68,7 @@ class ImagesDataset(Dataset):
 
 @DATASETS.register_module
 class PrefetchImagesDataset(Dataset):
-    def __init__(self, ann_file, transform, in_channels=3, prefetch=True, prefetch_size=300):
+    def __init__(self, ann_file, transform, in_channels=3, prefetch=True, prefetch_size=(300, 300)):
         super().__init__()
 
         self.prefetch = prefetch
@@ -80,6 +80,9 @@ class PrefetchImagesDataset(Dataset):
             anns = json.load(f)
 
         self.paths = [ann['file_name'] for ann in anns['images']]
+
+        if not isinstance(prefetch_size, tuple):
+            prefetch_size = (prefetch_size, prefetch_size) 
         self.resize = T.Resize(prefetch_size)
 
         if self.prefetch:
