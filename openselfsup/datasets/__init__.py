@@ -1,5 +1,6 @@
 from .builder import build_dataset
 from .byol import BYOLDataset, PrefetchImagesDataset, ImagesDataset
+from .pixpro import PixProDataset
 from .data_sources import *
 from .pipelines import *
 from .classification import ClassificationDataset
