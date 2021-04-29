@@ -311,3 +311,119 @@ class NormalizeMeanVar2(object):
 class NormalizeMinMax(object):
     def __call__(self, img):
         return (img - img.min()) / (img.max() - img.min())
+
+@PIPELINES.register_module()
+class RemoveExtraPadding(object):
+    """Removes black/white padding from image
+    """
+
+    def get_borders(self, img, bboxes=None):
+        """Finds borders of the actual image (removing padding)
+        Args:
+            img: thresholded numpy array
+        Returns:
+            indexes that correspond to left, right, top and bottom borders
+        
+        What this does :
+        1. find 'useful' rows and columns that contain less than 99% of black pixels
+        2. get the first and last indexes of these 'useful' rows and columns; 
+        these corresponds to the left, right, top and bottom borders
+        3. adjust these values to make sure all bboxes are included in the crop
+        
+        In case we notice weird behaviors, we can ask the row/column total intensity to
+        be under a threshold to be allowed to remove it. This will add a kind of garde fou
+        
+        np.logical_and(
+            np.sum(thresh == 0, axis=0) > thresh.shape[1] * 0.99, 
+            np.sum(thresh, axis=0) < thresh.max() * thresh.shape[0] * 0.01
+        )
+        """
+        
+        useful_cols = np.where(np.sum(img == 0, axis=0) < (img.shape[0] * 0.99))[0]
+        useful_rows = np.where(np.sum(img == 0, axis=1) < (img.shape[1] * 0.99))[0]
+
+        left = useful_cols[0]
+        right = useful_cols[-1]
+        top = useful_rows[0]
+        bottom = useful_rows[-1]
+
+        # Adjust borders so that all bboxes are included in the crop
+        # also add a 'safety' 10 columns/rows
+        safety = 10
+
+        if bboxes is not None:
+            left = min(left, np.min(bboxes[:, 0]))
+            right = max(right, np.max(bboxes[:, 2]))
+            top = min(top, np.min(bboxes[:, 1]))
+            bottom = max(bottom, np.max(bboxes[:, 3]))
+
+        left = max(left - safety, 0)
+        right = min(right + safety, img.shape[1])
+        top = max(top - safety, 0)
+        bottom = min(bottom + safety, img.shape[0])
+
+        return left, right, top, bottom
+
+    @staticmethod
+    def round_to_bit(number):
+        for i in range(8, 17):
+            if number <= pow(2, i):
+                return pow(2, i)
+
+    def threshold(self, img):
+        # _max = self.round_to_bit(img.max())
+        _max = img.max()
+        img[img < _max * 0.3] = 0
+        img[img > _max - _max * 0.3] = 0
+        return img
+        
+    def crop(self, img, bboxes=None):
+        """Removes black/white padding from img
+        Args:
+            img: numpy array
+            bboxes: bboxes on the image
+        Returns:
+            cropped image and adjusted bboxes
+        1. Threshold image so that pixels that are almost white turn completely white,
+        and pixels that are almost black turn completely black 
+        In practice, we set all these thresholded pixels to 0 (black) so that we don't have
+        to handle two cases (black and white)
+        2. find borders of real image using thresholded image
+        3. return cropped image using borders
+        """
+        
+        # threshold image
+        img_thresholded = self.threshold(img.copy())
+
+        # get borders without black/white padding
+        left, right, top, bottom = self.get_borders(img_thresholded, bboxes)
+
+        img_cropped = img[top:bottom, left:right]
+
+        # update bboxes
+        if bboxes is not None:
+            bboxes[:, 0] = bboxes[:, 0] - left
+            bboxes[:, 1] = bboxes[:, 1] - top
+            bboxes[:, 2] = bboxes[:, 2] - left
+            bboxes[:, 3] = bboxes[:, 3] - top
+
+        return img_cropped, bboxes, [left, right, top, bottom]
+
+    def __call__(self, img):
+        """Call function to remove padding on images.
+        Args:
+            results (dict): Result dict from loading pipeline.
+        Returns:
+            dict: Cropped image
+        """
+        
+        if isinstance(img, Image.Image):
+            img = np.asarray(img)
+
+        try:
+            cropped_img, cropped_bboxes, offsets = self.crop(img)
+        except:
+            print('Error cropping')
+            cropped_img = img
+
+        return Image.fromarray(cropped_img)
