@@ -241,11 +241,11 @@ class PixPro(nn.Module):
         with torch.no_grad():  # no gradient to keys
             # self._momentum_update_key_encoder()  # update the key encoder
 
-            feat_1_ng = self.encoder_k(im_1)  # keys: NxC
+            feat_1_ng = self.encoder_k(im_1)[0]  # keys: NxC
             proj_1_ng = self.projector_k(feat_1_ng)
             proj_1_ng = F.normalize(proj_1_ng, dim=1)
 
-            feat_2_ng = self.encoder_k(im_2)
+            feat_2_ng = self.encoder_k(im_2)[0]
             proj_2_ng = self.projector_k(feat_2_ng)
             proj_2_ng = F.normalize(proj_2_ng, dim=1)
 
@@ -267,10 +267,10 @@ class PixPro(nn.Module):
                          self.regression_loss(pred_instance_2, proj_instance_1_ng)
             loss = loss + self.pixpro_ins_loss_weight * loss_instance
 
-        return loss
+        return dict(loss=loss)
 
     def forward_test(self, img, **kwargs):
         pass
 
-    def forward(self, im_1, im_2, coord1, coord2, mode='train', **kwargs):
-        return self.forward_train(im_1, im_2, coord1, coord2, **kwargs)
+    def forward(self, img, img2, coord, coord2, mode='train', **kwargs):
+        return self.forward_train(img, img2, coord, coord2, **kwargs)

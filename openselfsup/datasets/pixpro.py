@@ -11,8 +11,8 @@ import numpy as np
 import cv2
 from tqdm import tqdm
 import torchvision.transforms as T
-from PIL import Image
-
+from PIL import Image, ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 class ComposeCoord(object):
     """Composes several transforms together.
 
@@ -72,10 +72,11 @@ class PixProDataset(Dataset):
         print(f'Loading {len(self.paths)} images\n')
         for path in tqdm(self.paths):
             try:
-                img = cv2.imread(path, -1).astype(np.float32)
+                with open(path, 'rb') as f:
+                    img = Image.open(f).convert('F')
             except:
                 continue
-            img = torch.tensor(img).unsqueeze(0)
+            # img = torch.tensor(img).unsqueeze(0)
             img = self.resize(img)
             self.torch_images.append(img)
         print(f'Loaded {len(self.torch_images)} images\n')
@@ -87,17 +88,14 @@ class PixProDataset(Dataset):
     def __getitem__(self, index):
         if self.prefetch:
             img = self.torch_images[index]
-            img = img.expand(1, self.in_channels, -1, -1)
+            # img = img.expand(1, self.in_channels, -1, -1)
 
         else:
             path = self.paths[index]
             with open(path, 'rb') as f:
                 img = Image.open(f).convert('F')
-            # img = cv2.imread(path, -1).astype(np.float32)
-            # img = torch.tensor(img).unsqueeze(0)
-            # img = img.expand(self.in_channels, -1, -1).unsqueeze(0)
 
         view1, coord1 = self.transform(img)
         view2, coord2 = self.transform(img)
 
-        return dict(im_1=view1, im_2=view2, coord1=coord1, coord2=coord2)
+        return dict(img=view1, img2=view2, coord=coord1, coord2=coord2)
