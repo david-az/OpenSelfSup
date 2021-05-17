@@ -105,7 +105,8 @@ class PixPro(nn.Module):
         pixpro_pos_ratio=0.7,
         pixpro_clamp_value=0.,
         pixpro_transform_layer=1,
-        pixpro_ins_loss_weight=0.
+        pixpro_ins_loss_weight=0.,
+        pretrained=None
     ):
         super(PixPro, self).__init__()
 
@@ -120,11 +121,16 @@ class PixPro(nn.Module):
 
         # create the encoder
         self.encoder = builder.build_backbone(backbone)
+        self.backbone = self.encoder
         self.projector = Proj_Head()
 
         # create the encoder_k
         self.encoder_k = builder.build_backbone(backbone)
         self.projector_k = Proj_Head()
+
+        if pretrained is not None:
+            print('load model from: {}'.format(pretrained))
+            self.encoder.init_weights(pretrained=pretrained)
 
         for param_q, param_k in zip(self.encoder.parameters(), self.encoder_k.parameters()):
             param_k.data.copy_(param_q.data)  # initialize
@@ -153,8 +159,26 @@ class PixPro(nn.Module):
                 param_k.requires_grad = False
 
             self.avgpool = nn.AvgPool2d(7, stride=1)
+            self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         
         self.encoder_avgpool = nn.AdaptiveAvgPool2d((1, 1))
+
+    def init_weights(self, pretrained=None):
+        """Initialize the weights of model.
+
+        Args:
+            pretrained (str, optional): Path to pre-trained weights.
+                Default: None.
+        """
+        if pretrained is not None:
+            print_log('load model from: {}'.format(pretrained), logger='root')
+        self.online_net[0].init_weights(pretrained=pretrained) # backbone
+        self.online_net[1].init_weights(init_linear='kaiming') # projection
+        for param_ol, param_tgt in zip(self.online_net.parameters(),
+                                       self.target_net.parameters()):
+            param_tgt.data.copy_(param_ol.data)
+        # init the predictor in the head
+        self.head.init_weights()
 
     @torch.no_grad()
     def _momentum_update(self):
